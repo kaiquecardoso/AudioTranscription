@@ -2,36 +2,21 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Alert,
   Modal,
-  Dimensions,
   StatusBar,
   ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  useAudioPlayer, 
-  useAudioRecorder, 
-  useAudioRecorderState,
-  AudioModule,
-  RecordingPresets,
-  setAudioModeAsync
-} from 'expo-audio';
 import * as FileSystem from 'expo-file-system';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { API_CONFIG } from '../config/api';
-
-const { width, height } = Dimensions.get('window');
-
-interface RecordingModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onRecordingComplete: (recording: any) => void;
-}
+import { useRecording, useAudioPlayback } from '../hooks';
+import { processRecording, formatDuration, createRecordingData } from '../functions';
+import { recordingModalStyles } from '../styles';
+import { RecordingModalProps } from '../types';
 
 const RecordingModal: React.FC<RecordingModalProps> = ({
   visible,
@@ -40,237 +25,104 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const { settings } = useSettings();
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(recorder);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const player = useAudioPlayer();
-  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
-  const [transcription, setTranscription] = useState<string>('');
-  const [summary, setSummary] = useState<string>('');
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (recorderState.isRecording) {
-      interval = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [recorderState.isRecording]);
-
-  useEffect(() => {
-    // Configurar permissões e modo de áudio
-    const setupAudio = async () => {
-      try {
-        const status = await AudioModule.requestRecordingPermissionsAsync();
-        if (!status.granted) {
-          Alert.alert('Erro', 'Permissão para acessar o microfone foi negada');
-          return;
-        }
-
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          allowsRecording: true,
-        });
-      } catch (error) {
-        console.error('Erro ao configurar áudio:', error);
-      }
-    };
-
-    setupAudio();
-  }, []);
+  const { 
+    state, 
+    recorderState, 
+    startRecording, 
+    pauseRecording, 
+    resumeRecording, 
+    stopRecording, 
+    resetState, 
+    updateState 
+  } = useRecording();
+  const { isPlaying, currentPlayingId, playRecording, stopPlayback } = useAudioPlayback();
 
   useEffect(() => {
     if (visible) {
-      // Resetar estado quando o modal abrir
-      setRecordingDuration(0);
-      setRecordingUri(null);
-      setIsPlaying(false);
-      setIsPaused(false);
-      setCurrentPlayingId(null);
-      setTranscription('');
-      setSummary('');
-      setIsTranscribing(false);
-      setIsSummaryExpanded(false);
-      player.pause();
+      resetState();
     }
-  }, [visible]);
+  }, [visible, resetState]);
 
-  const startRecording = async () => {
-    try {
-      console.log('Preparando gravação...');
-      await recorder.prepareToRecordAsync();
-      console.log('Iniciando gravação...');
-      recorder.record();
-      console.log('Gravação iniciada com sucesso');
-      setRecordingDuration(0);
-    } catch (error) {
-      console.error('Erro ao iniciar gravação:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      Alert.alert('Erro', `Falha ao iniciar gravação: ${errorMessage}`);
+  const handleStartRecording = async () => {
+    await startRecording();
+  };
+
+  const handlePauseRecording = async () => {
+    await pauseRecording();
+  };
+
+  const handleResumeRecording = async () => {
+    await resumeRecording();
+  };
+
+  const handleStopRecording = async () => {
+    const uri = await stopRecording();
+    // Iniciar transcrição automaticamente quando parar a gravação
+    if (uri) {
+      handleTranscribeRecording(uri);
     }
   };
 
-  const pauseRecording = async () => {
+  const handleTranscribeRecording = async (recordingUri: string) => {
     try {
-      console.log('Pausando gravação...');
-      console.log('Estado antes da pausa - isRecording:', recorderState.isRecording, 'isPaused:', isPaused);
-      await recorder.pause();
-      setIsPaused(true);
-      console.log('Estado após pausa - isRecording:', recorderState.isRecording, 'isPaused:', true);
-    } catch (error) {
-      console.error('Erro ao pausar gravação:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      Alert.alert('Erro', `Falha ao pausar gravação: ${errorMessage}`);
-    }
-  };
-
-  const resumeRecording = async () => {
-    try {
-      console.log('Retomando gravação...');
-      recorder.record();
-      setIsPaused(false);
-    } catch (error) {
-      console.error('Erro ao retomar gravação:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      Alert.alert('Erro', `Falha ao retomar gravação: ${errorMessage}`);
-    }
-  };
-
-  const stopRecording = async () => {
-    try {
-      console.log('Parando gravação...');
-      await recorder.stop();
+      updateState({ isTranscribing: true });
       
-      const uri = recorder.uri;
-      console.log('URI da gravação:', uri);
-      
-      // Verificar se o URI foi gerado corretamente
-      if (!uri) {
-        throw new Error('URI da gravação não foi gerado');
-      }
-      
-      setRecordingUri(uri);
-      setIsPaused(false);
-      
-      // Iniciar transcrição automaticamente apenas se habilitado nas configurações
-      if (settings.autoTranscription) {
-        transcribeRecording(uri);
-      }
-    } catch (error) {
-      console.error('Erro ao parar gravação:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      Alert.alert('Erro', `Falha ao parar gravação: ${errorMessage}`);
-    }
-  };
-
-  const transcribeRecording = async (recordingUri: string) => {
-    try {
-      setIsTranscribing(true);
-      
-      // 1. Fazer transcrição do áudio
-      const formData = new FormData();
-      formData.append('file', {
-        uri: recordingUri,
-        type: 'audio/m4a',
-        name: 'recording.m4a',
-      } as any);
-      formData.append('model', 'whisper-1');
-
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_CONFIG.OPENAI_API_KEY}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha na transcrição');
-      }
-
-      const data = await response.json();
-      const transcriptionText = data.text;
-      setTranscription(transcriptionText);
-
-      // 2. Gerar resumo do conteúdo
-      const summaryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_CONFIG.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'Analise o seguinte áudio transcrito e crie um resumo estruturado em português. Inclua:\n1. Tópicos principais discutidos\n2. Pontos-chave mencionados\n3. Conclusões ou decisões tomadas\n4. Ações ou próximos passos sugeridos\n\nFormate como um resumo executivo claro e organizado.',
-            },
-            {
-              role: 'user',
-              content: `Conteúdo do áudio transcrito:\n\n${transcriptionText}`,
-            },
-          ],
-          max_tokens: 300,
-        }),
-      });
-
-      const summaryData = await summaryResponse.json();
-      const summaryText = summaryData.choices[0].message.content;
-      setSummary(summaryText);
+      const { transcription, summary } = await processRecording(recordingUri);
+      updateState({ transcription, summary });
       
     } catch (error) {
       console.error('Erro na transcrição:', error);
       Alert.alert('Erro', 'Falha ao processar gravação');
     } finally {
-      setIsTranscribing(false);
+      updateState({ isTranscribing: false });
     }
   };
 
-  const playRecording = async () => {
-    if (!recordingUri) return;
+  const handlePlayRecording = async () => {
+    if (!state.uri) return;
 
-    try {
-      player.replace(recordingUri);
-      player.play();
-      
-      setIsPlaying(true);
-      setCurrentPlayingId(recordingUri);
-    } catch (error) {
-      console.error('Erro ao reproduzir:', error);
-      Alert.alert('Erro', 'Falha ao reproduzir gravação');
+    if (currentPlayingId === state.uri) {
+      stopPlayback();
+    } else {
+      playRecording(state.uri, state.uri);
     }
   };
 
-  const stopPlayback = async () => {
-    player.pause();
-    setIsPlaying(false);
-    setCurrentPlayingId(null);
-  };
-
-  const saveRecording = async () => {
-    if (!recordingUri) {
+  const handleSaveRecording = async () => {
+    if (!state.uri) {
       Alert.alert('Erro', 'Nenhuma gravação para salvar');
       return;
     }
 
     try {
+      // Se ainda está transcrevendo, aguardar a conclusão
+      if (state.isTranscribing) {
+        updateState({ isSaving: true });
+        
+        // Aguardar a transcrição terminar
+        const checkTranscription = () => {
+          return new Promise<void>((resolve) => {
+            const interval = setInterval(() => {
+              if (!state.isTranscribing) {
+                clearInterval(interval);
+                resolve();
+              }
+            }, 100);
+          });
+        };
+        
+        await checkTranscription();
+      }
+
       const fileName = `recording_${Date.now()}.m4a`;
       const fileUri = `${FileSystem.documentDirectory}${fileName}`;
       
       // Verificar se o arquivo de origem existe
-      const sourceInfo = await FileSystem.getInfoAsync(recordingUri);
+      const sourceInfo = await FileSystem.getInfoAsync(state.uri);
       console.log('Verificando arquivo origem:', sourceInfo);
       
       if (!sourceInfo.exists) {
         console.log('Arquivo não encontrado, mas tentando continuar...');
-        // Vamos tentar continuar mesmo assim
       }
 
       // Garantir que o diretório de destino existe
@@ -282,26 +134,23 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
       // Tentar copyAsync primeiro, se falhar usar moveAsync
       try {
         await FileSystem.copyAsync({
-          from: recordingUri,
+          from: state.uri,
           to: fileUri,
         });
       } catch (copyError) {
         console.log('Copy falhou, tentando move:', copyError);
         await FileSystem.moveAsync({
-          from: recordingUri,
+          from: state.uri,
           to: fileUri,
         });
       }
 
-      const recordingData = {
-        id: Date.now().toString(),
-        uri: fileUri,
-        duration: recordingDuration,
-        transcription: transcription,
-        summary: summary,
-        timestamp: new Date().toISOString(),
-        name: `Gravação ${new Date().toLocaleDateString('pt-BR')}`,
-      };
+      const recordingData = createRecordingData(
+        fileUri,
+        state.duration,
+        state.transcription,
+        state.summary
+      );
 
       onRecordingComplete(recordingData);
       onClose();
@@ -309,13 +158,9 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
       console.error('Erro ao salvar gravação:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       Alert.alert('Erro', `Falha ao salvar gravação: ${errorMessage}`);
+    } finally {
+      updateState({ isSaving: false });
     }
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleClose = () => {
@@ -326,7 +171,7 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
         [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Sim', onPress: () => {
-            stopRecording();
+            handleStopRecording();
             onClose();
           }},
         ]
@@ -344,11 +189,11 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
       onRequestClose={handleClose}
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[recordingModalStyles.container, { backgroundColor: theme.background }]}>
         <BlurView
           intensity={80}
           tint="dark"
-          style={[styles.header, {
+          style={[recordingModalStyles.header, {
             borderBottomWidth: 1,
             borderBottomColor: theme.glassBorder,
             shadowColor: theme.glassShadow,
@@ -358,86 +203,87 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
             elevation: 8,
           }]}
         >
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <TouchableOpacity onPress={handleClose} style={recordingModalStyles.closeButton}>
             <Ionicons name="close" size={24} color={theme.onSurface} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.onSurface }]}>
+          <Text style={[recordingModalStyles.headerTitle, { color: theme.onSurface }]}>
             Gravação de Voz
           </Text>
-          <View style={styles.placeholder} />
+          <View style={recordingModalStyles.placeholder} />
         </BlurView>
 
         <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          style={recordingModalStyles.scrollView}
+          contentContainerStyle={recordingModalStyles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.recordingArea}>
+          <View style={recordingModalStyles.recordingArea}>
             <TouchableOpacity
-              style={[styles.microphoneContainer, {
-                backgroundColor: recorderState.isRecording && !isPaused ? theme.error : 
-                                recorderState.isRecording && isPaused ? theme.secondary :
+              style={[recordingModalStyles.microphoneContainer, {
+                backgroundColor: recorderState.isRecording && !state.isPaused ? theme.error : 
+                                recorderState.isRecording && state.isPaused ? theme.secondary :
                                 theme.primary,
-                shadowColor: recorderState.isRecording && !isPaused ? theme.error : 
-                            recorderState.isRecording && isPaused ? theme.secondary :
+                shadowColor: recorderState.isRecording && !state.isPaused ? theme.error : 
+                            recorderState.isRecording && state.isPaused ? theme.secondary :
                             theme.primary,
               }]}
-              onPress={!recorderState.isRecording && !recordingUri && !isPaused ? startRecording : undefined}
-              disabled={recorderState.isRecording || !!recordingUri}
+              onPress={!recorderState.isRecording && !state.uri && !state.isPaused ? handleStartRecording : undefined}
+              disabled={recorderState.isRecording || !!state.uri}
             >
               <Ionicons 
-                name={recorderState.isRecording && isPaused ? "pause" : "mic"} 
+                name={recorderState.isRecording && state.isPaused ? "pause" : "mic"} 
                 size={40} 
                 color={theme.onPrimary} 
               />
             </TouchableOpacity>
             
-            <Text style={[styles.durationText, { color: theme.onSurface }]}>
-              {formatDuration(recordingDuration)}
+            <Text style={[recordingModalStyles.durationText, { color: theme.onSurface }]}>
+              {formatDuration(state.duration)}
             </Text>
             
-            <Text style={[styles.statusText, { color: theme.onSurfaceVariant }]}>
-              {recorderState.isRecording && !isPaused ? 'Gravando...' : 
-               recorderState.isRecording && isPaused ? 'Gravação pausada' :
-               isTranscribing ? 'Processando áudio...' : 
-               recordingUri ? 'Gravação concluída' : 
+            <Text style={[recordingModalStyles.statusText, { color: theme.onSurfaceVariant }]}>
+              {recorderState.isRecording && !state.isPaused ? 'Gravando...' : 
+               recorderState.isRecording && state.isPaused ? 'Gravação pausada' :
+               state.isTranscribing ? 'Processando áudio...' : 
+               state.isSaving ? 'Salvando gravação...' :
+               state.uri ? 'Gravação concluída' : 
                'Toque no microfone para começar'}
             </Text>
           </View>
 
-          {transcription && (
-            <View style={[styles.transcriptionContainer, {
+          {state.transcription && (
+            <View style={[recordingModalStyles.transcriptionContainer, {
               backgroundColor: theme.surface,
               borderColor: theme.glassBorder,
             }]}>
               <TouchableOpacity
-                style={styles.transcriptionHeader}
-                onPress={() => setIsSummaryExpanded(!isSummaryExpanded)}
+                style={recordingModalStyles.transcriptionHeader}
+                onPress={() => updateState({ isSummaryExpanded: !state.isSummaryExpanded })}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.transcriptionTitle, { color: theme.onSurface }]}>
+                <Text style={[recordingModalStyles.transcriptionTitle, { color: theme.onSurface }]}>
                   Transcrição
                 </Text>
                 <Ionicons 
-                  name={isSummaryExpanded ? "chevron-up" : "chevron-down"} 
+                  name={state.isSummaryExpanded ? "chevron-up" : "chevron-down"} 
                   size={20} 
                   color={theme.onSurface} 
                 />
               </TouchableOpacity>
               
-              <Text style={[styles.transcriptionText, { color: theme.onSurfaceVariant }]}>
-                {transcription}
+              <Text style={[recordingModalStyles.transcriptionText, { color: theme.onSurfaceVariant }]}>
+                {state.transcription}
               </Text>
               
-              {summary && (
-                <View style={styles.summarySection}>
-                  <Text style={[styles.summaryTitle, { color: theme.onSurface }]}>
+              {state.summary && (
+                <View style={recordingModalStyles.summarySection}>
+                  <Text style={[recordingModalStyles.summaryTitle, { color: theme.onSurface }]}>
                     Resumo do Conteúdo
                   </Text>
                   
-                  {isSummaryExpanded && (
-                    <Text style={[styles.summaryText, { color: theme.onSurfaceVariant }]}>
-                      {summary}
+                  {state.isSummaryExpanded && (
+                    <Text style={[recordingModalStyles.summaryText, { color: theme.onSurfaceVariant }]}>
+                      {state.summary}
                     </Text>
                   )}
                 </View>
@@ -445,26 +291,26 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
             </View>
           )}
 
-          <View style={styles.controls}>
+          <View style={recordingModalStyles.controls}>
             {/* Durante gravação - pause e stop */}
-            {recorderState.isRecording && !isPaused && !recordingUri && (
+            {recorderState.isRecording && !state.isPaused && !state.uri && (
               <>
                 <TouchableOpacity
-                  style={[styles.controlButton, {
+                  style={[recordingModalStyles.controlButton, {
                     backgroundColor: theme.secondary,
                     shadowColor: theme.secondary,
                   }]}
-                  onPress={pauseRecording}
+                  onPress={handlePauseRecording}
                 >
                   <Ionicons name="pause" size={24} color={theme.onPrimary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.controlButton, {
+                  style={[recordingModalStyles.controlButton, {
                     backgroundColor: theme.error,
                     shadowColor: theme.error,
                   }]}
-                  onPress={stopRecording}
+                  onPress={handleStopRecording}
                 >
                   <Ionicons name="stop" size={24} color={theme.onPrimary} />
                 </TouchableOpacity>
@@ -472,24 +318,24 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
             )}
 
             {/* Gravação pausada - play para continuar */}
-            {isPaused && (
+            {state.isPaused && (
               <>
                 <TouchableOpacity
-                  style={[styles.controlButton, {
+                  style={[recordingModalStyles.controlButton, {
                     backgroundColor: theme.primary,
                     shadowColor: theme.primary,
                   }]}
-                  onPress={resumeRecording}
+                  onPress={handleResumeRecording}
                 >
                   <Ionicons name="play" size={24} color={theme.onPrimary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.controlButton, {
+                  style={[recordingModalStyles.controlButton, {
                     backgroundColor: theme.error,
                     shadowColor: theme.error,
                   }]}
-                  onPress={stopRecording}
+                  onPress={handleStopRecording}
                 >
                   <Ionicons name="stop" size={24} color={theme.onPrimary} />
                 </TouchableOpacity>
@@ -497,14 +343,14 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
             )}
 
             {/* Após gravação concluída */}
-            {recordingUri && !recorderState.isRecording && (
+            {state.uri && !recorderState.isRecording && (
               <>
                 <TouchableOpacity
-                  style={[styles.controlButton, {
+                  style={[recordingModalStyles.controlButton, {
                     backgroundColor: theme.secondary,
                     shadowColor: theme.secondary,
                   }]}
-                  onPress={isPlaying ? stopPlayback : playRecording}
+                  onPress={handlePlayRecording}
                 >
                   <Ionicons 
                     name={isPlaying ? "pause" : "play"} 
@@ -513,24 +359,25 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
                   />
                 </TouchableOpacity>
 
-                {!transcription && !isTranscribing && (
+                {!state.transcription && !state.isTranscribing && (
                   <TouchableOpacity
-                    style={[styles.controlButton, {
+                    style={[recordingModalStyles.controlButton, {
                       backgroundColor: theme.primary,
                       shadowColor: theme.primary,
                     }]}
-                    onPress={() => recordingUri && transcribeRecording(recordingUri)}
+                    onPress={() => state.uri && handleTranscribeRecording(state.uri)}
                   >
                     <Ionicons name="analytics" size={24} color={theme.onPrimary} />
                   </TouchableOpacity>
                 )}
 
                 <TouchableOpacity
-                  style={[styles.controlButton, {
-                    backgroundColor: theme.tertiary,
-                    shadowColor: theme.tertiary,
+                  style={[recordingModalStyles.controlButton, {
+                    backgroundColor: state.isSaving ? theme.onSurfaceVariant : theme.tertiary,
+                    shadowColor: state.isSaving ? theme.onSurfaceVariant : theme.tertiary,
                   }]}
-                  onPress={saveRecording}
+                  onPress={handleSaveRecording}
+                  disabled={state.isSaving}
                 >
                   <Ionicons name="checkmark" size={24} color={theme.onPrimary} />
                 </TouchableOpacity>
@@ -542,119 +389,5 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  placeholder: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    paddingBottom: 40,
-  },
-  recordingArea: {
-    alignItems: 'center',
-    marginBottom: 60,
-  },
-  microphoneContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 30,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  durationText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  statusText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  controls: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  controlButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  transcriptionContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    width: '100%',
-  },
-  transcriptionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  transcriptionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  transcriptionText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  summarySection: {
-    marginTop: 8,
-  },
-  summaryTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  summaryText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontStyle: 'italic',
-    marginTop: 8,
-  },
-});
 
 export default RecordingModal;

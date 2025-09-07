@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface Settings {
-  autoTranscription: boolean;
   highQuality: boolean;
   saveToGallery: boolean;
   notifications: boolean;
@@ -28,7 +27,6 @@ interface SettingsProviderProps {
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) => {
   const [settings, setSettings] = useState<Settings>({
-    autoTranscription: true,
     highQuality: true,
     saveToGallery: false,
     notifications: true,
