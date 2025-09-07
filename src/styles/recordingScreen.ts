@@ -25,7 +25,7 @@ export const recordingScreenStyles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingBottom: 100,
   },
   emptyText: {
     fontSize: 18,

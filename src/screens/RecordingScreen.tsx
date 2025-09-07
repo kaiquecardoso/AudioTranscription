@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
   ScrollView,
   Alert,
   StatusBar,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
-import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../contexts/ThemeContext';
 import RecordingModal from './RecordingModal';
 import { useRecordings, useAudioPlayback } from '../hooks';
-import { processRecording, formatDuration, formatDate, formatDateTime, createRecordingData } from '../functions';
+import { processRecording } from '../functions';
 import { recordingScreenStyles } from '../styles';
 import { Recording } from '../types';
+import { 
+  RecordingHeader, 
+  EmptyState, 
+  RecordingItem, 
+  FloatingActionButton 
+} from '../components';
 
 export default function RecordingScreen() {
   const { theme } = useTheme();
@@ -84,139 +85,41 @@ export default function RecordingScreen() {
     addRecording(newRecording);
   };
 
-  const renderRightActions = (recording: Recording) => {
-    return (
-      <View style={recordingScreenStyles.rightActions}>
-        <TouchableOpacity
-          style={[recordingScreenStyles.deleteAction, { backgroundColor: theme.error }]}
-          onPress={() => handleDeleteRecording(recording.id)}
-        >
-          <Ionicons name="trash" size={24} color={theme.onError} />
-          <Text style={[recordingScreenStyles.deleteActionText, { color: theme.onError }]}>
-            Excluir
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
 
   return (
     <View style={[recordingScreenStyles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <BlurView
-        intensity={80}
-        tint="dark"
-        style={[recordingScreenStyles.header, {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.glassBorder,
-          shadowColor: theme.glassShadow,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          elevation: 8,
-        }]}
-      >
-        <Text style={[recordingScreenStyles.headerTitle, { color: theme.onSurface }]}>
-          Gravações de Voz
-        </Text>
-      </BlurView>
+      <RecordingHeader title="Gravações de Voz" />
 
-      <ScrollView 
-        style={recordingScreenStyles.scrollView}
-        contentContainerStyle={recordingScreenStyles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+
         {recordings.length === 0 ? (
-          <View style={recordingScreenStyles.emptyState}>
-            <Ionicons name="mic-off" size={64} color={theme.onSurfaceVariant} />
-            <Text style={[recordingScreenStyles.emptyText, { color: theme.onSurface }]}>
-              Nenhuma gravação encontrada
-            </Text>
-            <Text style={[recordingScreenStyles.emptySubtext, { color: theme.onSurfaceVariant }]}>
-              Toque no botão + para começar a gravar
-            </Text>
-          </View>
+          <EmptyState
+            title="Nenhuma gravação encontrada"
+            subtitle="Toque no botão + para começar a gravar"
+          />
         ) : (
-          recordings.map((recording) => (
-            <Swipeable
+          <ScrollView 
+          style={recordingScreenStyles.scrollView}
+          contentContainerStyle={recordingScreenStyles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {recordings.map((recording) => (
+            <RecordingItem
               key={recording.id}
-              renderRightActions={() => renderRightActions(recording)}
-              rightThreshold={40}
-            >
-              <BlurView
-                intensity={50}
-                tint="dark"
-                style={[recordingScreenStyles.recordingItem, {
-                  borderBottomColor: theme.glassBorder,
-                  borderWidth: 1,
-                  borderColor: theme.glassBorder,
-                  shadowColor: theme.glassShadow,
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 4,
-                }]}
-              >
-              <View style={recordingScreenStyles.recordingInfo}>
-                <Text style={[recordingScreenStyles.recordingName, { color: theme.onSurface }]}>
-                  {recording.name}
-                </Text>
-                <Text style={[recordingScreenStyles.recordingDate, { color: theme.onSurfaceVariant }]}>
-                  {formatDateTime(recording.timestamp)}
-                </Text>
-                {recording.transcription && (
-                  <Text style={[recordingScreenStyles.transcriptionText, { color: theme.onSurfaceVariant }]} numberOfLines={2}>
-                    {recording.transcription}
-                  </Text>
-                )}
-                {recording.summary && (
-                  <Text style={[recordingScreenStyles.summaryText, { color: theme.onSurfaceVariant }]} numberOfLines={3}>
-                    {recording.summary}
-                  </Text>
-                )}
-              </View>
-              
-              <View style={recordingScreenStyles.recordingActions}>
-                <TouchableOpacity
-                  style={[recordingScreenStyles.actionButton, {
-                    backgroundColor: currentPlayingId === recording.id ? theme.error : theme.primary,
-                    shadowColor: currentPlayingId === recording.id ? theme.error : theme.primary,
-                  }]}
-                  onPress={() => handlePlayRecording(recording)}
-                >
-                  <Ionicons 
-                    name={currentPlayingId === recording.id ? "stop" : "play"} 
-                    size={20} 
-                    color={theme.onPrimary} 
-                  />
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[recordingScreenStyles.actionButton, {
-                    backgroundColor: theme.secondary,
-                    shadowColor: theme.secondary,
-                  }]}
-                  onPress={() => handleTranscribeRecording(recording)}
-                >
-                  <Ionicons name="text" size={20} color={theme.onPrimary} />
-                </TouchableOpacity>
-              </View>
-              </BlurView>
-            </Swipeable>
+              recording={recording}
+              isPlaying={currentPlayingId === recording.id}
+              onPlay={() => handlePlayRecording(recording)}
+              onTranscribe={() => handleTranscribeRecording(recording)}
+              onDelete={() => handleDeleteRecording(recording.id)}
+            />
           ))
+          }
+        </ScrollView>
         )}
-      </ScrollView>
+     
 
-      <TouchableOpacity
-        style={[recordingScreenStyles.fab, {
-          backgroundColor: theme.primary,
-          shadowColor: theme.primary,
-        }]}
-        onPress={() => setIsModalVisible(true)}
-      >
-        <Ionicons name="add" size={32} color={theme.onPrimary} />
-      </TouchableOpacity>
+      <FloatingActionButton onPress={() => setIsModalVisible(true)} />
 
       <RecordingModal
         visible={isModalVisible}
