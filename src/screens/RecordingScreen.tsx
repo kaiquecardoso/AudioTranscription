@@ -4,6 +4,8 @@ import {
   ScrollView,
   Alert,
   StatusBar,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import RecordingModal from './RecordingModal';
@@ -21,7 +23,7 @@ import {
 export default function RecordingScreen() {
   const { theme } = useTheme();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const { recordings, addRecording, updateRecording, deleteRecording } = useRecordings();
+  const { recordings, isLoading, error, addRecording, updateRecording, deleteRecording, clearError } = useRecordings();
   const { isPlaying, currentPlayingId, playRecording, stopPlayback } = useAudioPlayback();
 
   const handlePlayRecording = async (recordingItem: Recording) => {
@@ -92,14 +94,37 @@ export default function RecordingScreen() {
       
       <RecordingHeader title="Gravações de Voz" />
 
+      {/* Tratamento de erro */}
+      {error && (
+        <View style={[recordingScreenStyles.errorContainer, { backgroundColor: theme.errorContainer }]}>
+          <Text style={[recordingScreenStyles.errorText, { color: theme.onErrorContainer }]}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            style={[recordingScreenStyles.retryButton, { backgroundColor: theme.primary }]}
+            onPress={clearError}
+          >
+            <Text style={[recordingScreenStyles.retryButtonText, { color: theme.onPrimary }]}>
+              Tentar Novamente
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-        {recordings.length === 0 ? (
-          <EmptyState
-            title="Nenhuma gravação encontrada"
-            subtitle="Toque no botão + para começar a gravar"
-          />
-        ) : (
-          <ScrollView 
+      {/* Loading */}
+      {isLoading && recordings.length === 0 ? (
+        <View style={recordingScreenStyles.loadingContainer}>
+          <Text style={[recordingScreenStyles.loadingText, { color: theme.onSurface }]}>
+            Carregando gravações do banco de dados...
+          </Text>
+        </View>
+      ) : recordings.length === 0 ? (
+        <EmptyState
+          title="Nenhuma gravação encontrada"
+          subtitle="Toque no botão + para começar a gravar"
+        />
+      ) : (
+        <ScrollView 
           style={recordingScreenStyles.scrollView}
           contentContainerStyle={recordingScreenStyles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -114,11 +139,9 @@ export default function RecordingScreen() {
               onDelete={() => handleDeleteRecording(recording.id)}
               onStop={() => stopPlayback()}
             />
-          ))
-          }
+          ))}
         </ScrollView>
-        )}
-     
+      )}
 
       <FloatingActionButton onPress={() => setIsModalVisible(true)} />
 

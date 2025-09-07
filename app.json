@@ -37,7 +37,8 @@
     },
     "plugins": [
       "expo-media-library",
-      "expo-audio"
+      "expo-audio",
+      "expo-sqlite"
     ]
   }
 }

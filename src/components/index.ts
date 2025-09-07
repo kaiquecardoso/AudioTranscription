@@ -7,3 +7,6 @@ export { default as RecordingModalHeader } from './RecordingModalHeader';
 export { default as RecordingArea } from './RecordingArea';
 export { default as TranscriptionSection } from './TranscriptionSection';
 export { default as RecordingControls } from './RecordingControls';
+export { DatabaseInitializer } from './DatabaseInitializer';
+export { DatabaseViewer } from './DatabaseViewer';
+export { RecordingDetailsModal } from './RecordingDetailsModal';

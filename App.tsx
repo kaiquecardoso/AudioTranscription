@@ -10,6 +10,7 @@ import RecordingScreen from './src/screens/RecordingScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { SettingsProvider } from './src/contexts/SettingsContext';
+import { DatabaseInitializer, DatabaseViewer } from './src/components';
 
 const Tab = createBottomTabNavigator();
 
@@ -30,6 +31,8 @@ function AppContent() {
                 iconName = focused ? 'mic' : 'mic-outline';
               } else if (route.name === 'Configurações') {
                 iconName = focused ? 'settings' : 'settings-outline';
+              } else if (route.name === 'Banco de Dados') {
+                iconName = focused ? 'server' : 'server-outline';
               } else {
                 iconName = 'help-outline';
               }
@@ -77,6 +80,13 @@ function AppContent() {
               title: 'Configurações',
             }}
           />
+          <Tab.Screen 
+            name="Banco de Dados" 
+            component={DatabaseViewer}
+            options={{
+              title: 'Banco de Dados',
+            }}
+          />
         </Tab.Navigator>
       </NavigationContainer>
     </View>
@@ -88,7 +98,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <SettingsProvider>
-          <AppContent />
+          <DatabaseInitializer>
+            <AppContent />
+          </DatabaseInitializer>
         </SettingsProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

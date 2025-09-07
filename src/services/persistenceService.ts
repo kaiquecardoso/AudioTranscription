@@ -1,96 +1,142 @@
-import * as FileSystem from 'expo-file-system';
+import { DatabaseService } from './databaseService';
 import { Recording } from '../types';
 
 export class PersistenceService {
-  private static readonly METADATA_FILE = 'recordings_metadata.json';
-
-  private static getMetadataPath(): string {
-    return `${FileSystem.documentDirectory}${this.METADATA_FILE}`;
+  // Inicializar o banco de dados
+  static async initialize(): Promise<void> {
+    await DatabaseService.initialize();
   }
 
-  static async saveRecordingMetadata(recording: Recording): Promise<void> {
+  // CREATE - Salvar gravação completa
+  static async saveRecording(recording: Recording): Promise<void> {
     try {
-      const metadataPath = this.getMetadataPath();
-      let metadata: Record<string, Partial<Recording>> = {};
+      await DatabaseService.createRecording(recording);
+      console.log('Gravação salva com sucesso:', recording.id);
+    } catch (error) {
+      console.error('Erro ao salvar gravação:', error);
+      throw error;
+    }
+  }
 
-      // Carregar metadados existentes
-      try {
-        const existingData = await FileSystem.readAsStringAsync(metadataPath);
-        metadata = JSON.parse(existingData);
-      } catch (error) {
-        // Arquivo não existe ou está corrompido, começar do zero
-        console.log('Criando novo arquivo de metadados');
-      }
+  // READ - Carregar gravação por ID
+  static async loadRecording(recordingId: string): Promise<Recording | null> {
+    try {
+      return await DatabaseService.getRecordingById(recordingId);
+    } catch (error) {
+      console.error('Erro ao carregar gravação:', error);
+      return null;
+    }
+  }
 
-      // Salvar metadados da gravação
+  // READ - Carregar todas as gravações
+  static async loadAllRecordings(): Promise<Recording[]> {
+    try {
+      return await DatabaseService.getAllRecordings();
+    } catch (error) {
+      console.error('Erro ao carregar todas as gravações:', error);
+      return [];
+    }
+  }
+
+  // UPDATE - Atualizar gravação
+  static async updateRecording(id: string, updates: Partial<Recording>): Promise<void> {
+    try {
+      await DatabaseService.updateRecording(id, updates);
+      console.log('Gravação atualizada:', id);
+    } catch (error) {
+      console.error('Erro ao atualizar gravação:', error);
+      throw error;
+    }
+  }
+
+  // DELETE - Deletar gravação
+  static async deleteRecording(recordingId: string): Promise<void> {
+    try {
+      await DatabaseService.deleteRecording(recordingId);
+      console.log('Gravação deletada:', recordingId);
+    } catch (error) {
+      console.error('Erro ao deletar gravação:', error);
+      throw error;
+    }
+  }
+
+  // DELETE - Deletar todas as gravações
+  static async clearAllRecordings(): Promise<void> {
+    try {
+      await DatabaseService.deleteAllRecordings();
+      console.log('Todas as gravações foram deletadas');
+    } catch (error) {
+      console.error('Erro ao limpar todas as gravações:', error);
+      throw error;
+    }
+  }
+
+  // SEARCH - Buscar gravações
+  static async searchRecordings(searchTerm: string): Promise<Recording[]> {
+    try {
+      return await DatabaseService.searchRecordings(searchTerm);
+    } catch (error) {
+      console.error('Erro ao buscar gravações:', error);
+      return [];
+    }
+  }
+
+  // STATS - Obter estatísticas
+  static async getStats(): Promise<{ total: number; totalDuration: number }> {
+    try {
+      return await DatabaseService.getStats();
+    } catch (error) {
+      console.error('Erro ao obter estatísticas:', error);
+      return { total: 0, totalDuration: 0 };
+    }
+  }
+
+  // Métodos de compatibilidade com a versão anterior (deprecated)
+  /** @deprecated Use saveRecording em vez de saveRecordingMetadata */
+  static async saveRecordingMetadata(recording: Recording): Promise<void> {
+    console.warn('saveRecordingMetadata está deprecated. Use saveRecording.');
+    return this.saveRecording(recording);
+  }
+
+  /** @deprecated Use loadRecording em vez de loadRecordingMetadata */
+  static async loadRecordingMetadata(recordingId: string): Promise<Partial<Recording> | null> {
+    console.warn('loadRecordingMetadata está deprecated. Use loadRecording.');
+    const recording = await this.loadRecording(recordingId);
+    return recording ? {
+      transcription: recording.transcription,
+      summary: recording.summary,
+      duration: recording.duration,
+      name: recording.name,
+    } : null;
+  }
+
+  /** @deprecated Use loadAllRecordings em vez de loadAllMetadata */
+  static async loadAllMetadata(): Promise<Record<string, Partial<Recording>>> {
+    console.warn('loadAllMetadata está deprecated. Use loadAllRecordings.');
+    const recordings = await this.loadAllRecordings();
+    const metadata: Record<string, Partial<Recording>> = {};
+    
+    recordings.forEach(recording => {
       metadata[recording.id] = {
         transcription: recording.transcription,
         summary: recording.summary,
         duration: recording.duration,
         name: recording.name,
       };
-
-      // Salvar de volta no arquivo
-      await FileSystem.writeAsStringAsync(metadataPath, JSON.stringify(metadata, null, 2));
-    } catch (error) {
-      console.error('Erro ao salvar metadados da gravação:', error);
-      throw error;
-    }
+    });
+    
+    return metadata;
   }
 
-  static async loadRecordingMetadata(recordingId: string): Promise<Partial<Recording> | null> {
-    try {
-      const metadataPath = this.getMetadataPath();
-      const data = await FileSystem.readAsStringAsync(metadataPath);
-      const metadata: Record<string, Partial<Recording>> = JSON.parse(data);
-      
-      return metadata[recordingId] || null;
-    } catch (error) {
-      console.error('Erro ao carregar metadados da gravação:', error);
-      return null;
-    }
-  }
-
-  static async loadAllMetadata(): Promise<Record<string, Partial<Recording>>> {
-    try {
-      const metadataPath = this.getMetadataPath();
-      const data = await FileSystem.readAsStringAsync(metadataPath);
-      return JSON.parse(data);
-    } catch (error) {
-      console.error('Erro ao carregar todos os metadados:', error);
-      return {};
-    }
-  }
-
+  /** @deprecated Use deleteRecording em vez de deleteRecordingMetadata */
   static async deleteRecordingMetadata(recordingId: string): Promise<void> {
-    try {
-      const metadataPath = this.getMetadataPath();
-      let metadata: Record<string, Partial<Recording>> = {};
-
-      try {
-        const data = await FileSystem.readAsStringAsync(metadataPath);
-        metadata = JSON.parse(data);
-      } catch (error) {
-        // Arquivo não existe, não há nada para deletar
-        return;
-      }
-
-      delete metadata[recordingId];
-
-      await FileSystem.writeAsStringAsync(metadataPath, JSON.stringify(metadata, null, 2));
-    } catch (error) {
-      console.error('Erro ao deletar metadados da gravação:', error);
-      throw error;
-    }
+    console.warn('deleteRecordingMetadata está deprecated. Use deleteRecording.');
+    return this.deleteRecording(recordingId);
   }
 
+  /** @deprecated Use clearAllRecordings em vez de clearAllMetadata */
   static async clearAllMetadata(): Promise<void> {
-    try {
-      const metadataPath = this.getMetadataPath();
-      await FileSystem.deleteAsync(metadataPath);
-    } catch (error) {
-      console.error('Erro ao limpar todos os metadados:', error);
-      throw error;
-    }
+    console.warn('clearAllMetadata está deprecated. Use clearAllRecordings.');
+    return this.clearAllRecordings();
   }
 }
