@@ -8,12 +8,14 @@ interface RecordingActionsProps {
   isPlaying: boolean;
   onPlay: () => void;
   onTranscribe: () => void;
+  isTranscribing?: boolean;
 }
 
 export default function RecordingActions({ 
   isPlaying, 
   onPlay, 
-  onTranscribe 
+  onTranscribe,
+  isTranscribing = false
 }: RecordingActionsProps) {
   const { theme } = useTheme();
 
@@ -35,12 +37,18 @@ export default function RecordingActions({
       
       <TouchableOpacity
         style={[recordingScreenStyles.actionButton, {
-          backgroundColor: theme.secondary,
-          shadowColor: theme.secondary,
+          backgroundColor: isTranscribing ? theme.tertiary : theme.secondary,
+          shadowColor: isTranscribing ? theme.tertiary : theme.secondary,
+          opacity: isTranscribing ? 0.7 : 1,
         }]}
         onPress={onTranscribe}
+        disabled={isTranscribing}
       >
-        <Ionicons name="text" size={20} color={theme.onPrimary} />
+        <Ionicons 
+          name={isTranscribing ? "hourglass" : "text"} 
+          size={20} 
+          color={theme.onPrimary} 
+        />
       </TouchableOpacity>
     </View>
   );

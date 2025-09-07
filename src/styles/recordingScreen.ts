@@ -188,4 +188,22 @@ export const recordingScreenStyles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  statusContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
 });

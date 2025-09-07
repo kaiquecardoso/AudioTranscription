@@ -16,6 +16,7 @@ interface RecordingItemProps {
   onTranscribe: () => void;
   onDelete: () => void;
   onStop?: () => void; // Adicionar callback para parar
+  isTranscribing?: boolean; // Indicador de transcrição em andamento
 }
 
 export default function RecordingItem({
@@ -24,7 +25,8 @@ export default function RecordingItem({
   onPlay,
   onTranscribe,
   onDelete,
-  onStop
+  onStop,
+  isTranscribing = false
 }: RecordingItemProps) {
   const { theme } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -115,7 +117,36 @@ export default function RecordingItem({
             isPlaying={localIsPlaying}
             onPlay={onPlay}
             onTranscribe={onTranscribe}
+            isTranscribing={isTranscribing}
           />
+        </View>
+
+        {/* Status indicators */}
+        <View style={recordingScreenStyles.statusContainer}>
+          {recording.transcription && (
+            <View style={[recordingScreenStyles.statusBadge, { backgroundColor: theme.primary }]}>
+              <Ionicons name="text" size={12} color={theme.onPrimary} />
+              <Text style={[recordingScreenStyles.statusText, { color: theme.onPrimary }]}>
+                Transcrito
+              </Text>
+            </View>
+          )}
+          {recording.summary && (
+            <View style={[recordingScreenStyles.statusBadge, { backgroundColor: theme.secondary }]}>
+              <Ionicons name="document-text" size={12} color={theme.onSecondary} />
+              <Text style={[recordingScreenStyles.statusText, { color: theme.onSecondary }]}>
+                Resumido
+              </Text>
+            </View>
+          )}
+          {isTranscribing && (
+            <View style={[recordingScreenStyles.statusBadge, { backgroundColor: theme.tertiary }]}>
+              <Ionicons name="hourglass" size={12} color={theme.onTertiary} />
+              <Text style={[recordingScreenStyles.statusText, { color: theme.onTertiary }]}>
+                Processando...
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Text: Transcription */}

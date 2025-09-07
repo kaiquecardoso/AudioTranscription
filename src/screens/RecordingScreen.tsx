@@ -23,6 +23,7 @@ import {
 export default function RecordingScreen() {
   const { theme } = useTheme();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [transcribingIds, setTranscribingIds] = useState<Set<string>>(new Set());
   const { recordings, isLoading, error, addRecording, updateRecording, deleteRecording, clearError } = useRecordings();
   const { isPlaying, currentPlayingId, playRecording, stopPlayback } = useAudioPlayback();
 
@@ -75,11 +76,43 @@ export default function RecordingScreen() {
 
   const handleTranscribeRecording = async (recording: Recording) => {
     try {
+      // Adicionar ID à lista de transcrições em andamento
+      setTranscribingIds(prev => new Set(prev).add(recording.id));
+
+      console.log('Iniciando transcrição para:', recording.id);
+      
+      // Processar gravação (transcrição + resumo)
       const { transcription, summary } = await processRecording(recording.uri);
+      
+      console.log('Transcrição gerada:', transcription.substring(0, 100) + '...');
+      console.log('Resumo gerado:', summary.substring(0, 100) + '...');
+      
+      // Atualizar no banco SQLite
       await updateRecording(recording.id, { transcription, summary });
+      
+      console.log('Gravação atualizada no banco SQLite:', recording.id);
+      
+      // Feedback de sucesso
+      Alert.alert(
+        'Sucesso!',
+        'Transcrição e resumo gerados com sucesso!',
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       console.error('Erro na transcrição:', error);
-      Alert.alert('Erro', 'Falha ao transcrever gravação');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      Alert.alert(
+        'Erro na Transcrição',
+        `Falha ao transcrever gravação: ${errorMessage}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      // Remover ID da lista de transcrições em andamento
+      setTranscribingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(recording.id);
+        return newSet;
+      });
     }
   };
 
@@ -134,6 +167,7 @@ export default function RecordingScreen() {
               key={recording.id}
               recording={recording}
               isPlaying={currentPlayingId === recording.id}
+              isTranscribing={transcribingIds.has(recording.id)}
               onPlay={() => handlePlayRecording(recording)}
               onTranscribe={() => handleTranscribeRecording(recording)}
               onDelete={() => handleDeleteRecording(recording.id)}
