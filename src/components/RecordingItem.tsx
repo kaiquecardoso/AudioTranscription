@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -15,6 +15,7 @@ interface RecordingItemProps {
   onPlay: () => void;
   onTranscribe: () => void;
   onDelete: () => void;
+  onStop?: () => void; // Adicionar callback para parar
 }
 
 export default function RecordingItem({
@@ -22,13 +23,36 @@ export default function RecordingItem({
   isPlaying,
   onPlay,
   onTranscribe,
-  onDelete
+  onDelete,
+  onStop
 }: RecordingItemProps) {
   const { theme } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
   const [animationValue] = useState(new Animated.Value(0));
   const [contentHeight, setContentHeight] = useState(0);
   const [isContentMeasured, setIsContentMeasured] = useState(false);
+  const [localIsPlaying, setLocalIsPlaying] = useState(false);
+
+  // Sincronizar estado local com prop
+  useEffect(() => {
+    setLocalIsPlaying(isPlaying);
+  }, [isPlaying]);
+
+  // Detectar quando a reprodução termina (simulação com timeout baseado na duração)
+  useEffect(() => {
+    if (localIsPlaying && recording.duration) {
+      const durationMs = recording.duration * 1000; // Converter segundos para milissegundos
+      const timeout = setTimeout(() => {
+        console.log('Reprodução terminou automaticamente para:', recording.name);
+        setLocalIsPlaying(false);
+        if (onStop) {
+          onStop();
+        }
+      }, durationMs);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [localIsPlaying, recording.duration, recording.name, onStop]);
 
   const toggleExpanded = () => {
     const toValue = isExpanded ? 0 : 1;
@@ -88,7 +112,7 @@ export default function RecordingItem({
             </Text>
           </View>
           <RecordingActions
-            isPlaying={isPlaying}
+            isPlaying={localIsPlaying}
             onPlay={onPlay}
             onTranscribe={onTranscribe}
           />

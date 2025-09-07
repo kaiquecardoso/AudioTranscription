@@ -112,6 +112,7 @@ export default function RecordingScreen() {
               onPlay={() => handlePlayRecording(recording)}
               onTranscribe={() => handleTranscribeRecording(recording)}
               onDelete={() => handleDeleteRecording(recording.id)}
+              onStop={() => stopPlayback()}
             />
           ))
           }
