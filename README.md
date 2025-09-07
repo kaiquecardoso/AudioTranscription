@@ -4,11 +4,14 @@ Um aplicativo React Native moderno para gravação de áudio com transcrição a
 
 ## 📱 Screenshots
 
-### Tela Principal de Lista de gravações
-![Tela Principal](https://fv5-6.files.fm/thumb_show.php?i=x2v5bfb22m&view&v=1&PHPSESSID=5b9453c83495df6acc9202920ab46c0a5eab7610)
+### Telas do Aplicativo
 
-### Tela de gravação
-![Tela de Configurações](https://fv5-6.files.fm/thumb_show.php?i=qzfnjb5f7x&view&v=1&PHPSESSID=5b9453c83495df6acc9202920ab46c0a5eab7610)
+<div align="center">
+  <img src="https://fv5-6.files.fm/thumb_show.php?i=x2v5bfb22m&view&v=1&PHPSESSID=5b9453c83495df6acc9202920ab46c0a5eab7610" width="300" alt="Tela Principal">
+  <img src="https://fv5-6.files.fm/thumb_show.php?i=qzfnjb5f7x&view&v=1&PHPSESSID=5b9453c83495df6acc9202920ab46c0a5eab7610" width="300" alt="Tela de Gravação">
+</div>
+
+**Tela Principal de Lista de gravações** | **Tela de gravação**
 
 ### 🎨 Interface Visual
 As imagens acima mostram a interface moderna do aplicativo com:
