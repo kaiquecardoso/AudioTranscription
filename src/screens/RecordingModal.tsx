@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import { setAudioModeAsync } from 'expo-audio';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRecording, useAudioPlayback } from '../hooks';
@@ -40,6 +41,13 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
   useEffect(() => {
     if (visible) {
       resetState();
+      // Garantir que o modo de áudio está configurado para gravação quando o modal abre
+      setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      }).catch(error => {
+        console.error('Erro ao configurar modo de áudio:', error);
+      });
     }
   }, [visible, resetState]);
 

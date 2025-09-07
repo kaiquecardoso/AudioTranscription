@@ -61,6 +61,13 @@ export const useRecording = () => {
   const startRecording = async () => {
     try {
       console.log('Preparando gravação...');
+      
+      // Garantir que o modo de áudio está configurado para gravação
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+      
       await recorder.prepareToRecordAsync();
       console.log('Iniciando gravação...');
       recorder.record();
@@ -88,6 +95,13 @@ export const useRecording = () => {
   const resumeRecording = async () => {
     try {
       console.log('Retomando gravação...');
+      
+      // Garantir que o modo de áudio está configurado para gravação
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+      
       recorder.record();
       setState(prev => ({ ...prev, isPaused: false }));
     } catch (error) {

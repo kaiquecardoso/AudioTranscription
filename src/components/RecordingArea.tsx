@@ -35,6 +35,18 @@ const RecordingArea: React.FC<RecordingAreaProps> = ({
     return 'Toque no microfone para começar';
   };
 
+  const handleMicrophonePress = () => {
+    console.log('Botão de microfone pressionado');
+    console.log('Estado atual - isRecording:', isRecording, 'uri:', uri, 'isPaused:', isPaused);
+    
+    if (!isRecording && !uri && !isPaused) {
+      console.log('Iniciando gravação...');
+      onStartRecording();
+    } else {
+      console.log('Gravação não pode ser iniciada - estado inválido');
+    }
+  };
+
   const getMicrophoneColor = () => {
     if (isRecording && !isPaused) return theme.error;
     if (isRecording && isPaused) return theme.secondary;
@@ -54,7 +66,7 @@ const RecordingArea: React.FC<RecordingAreaProps> = ({
           backgroundColor: getMicrophoneColor(),
           shadowColor: getShadowColor(),
         }]}
-        onPress={!isRecording && !uri && !isPaused ? onStartRecording : undefined}
+        onPress={handleMicrophonePress}
         disabled={isRecording || !!uri}
       >
         <Ionicons 
