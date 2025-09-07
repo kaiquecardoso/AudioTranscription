@@ -74,7 +74,7 @@ export default function RecordingScreen() {
   const handleTranscribeRecording = async (recording: Recording) => {
     try {
       const { transcription, summary } = await processRecording(recording.uri);
-      updateRecording(recording.id, { transcription, summary });
+      await updateRecording(recording.id, { transcription, summary });
     } catch (error) {
       console.error('Erro na transcrição:', error);
       Alert.alert('Erro', 'Falha ao transcrever gravação');
@@ -82,7 +82,7 @@ export default function RecordingScreen() {
   };
 
   const handleRecordingComplete = async (newRecording: Recording) => {
-    addRecording(newRecording);
+    await addRecording(newRecording);
   };
 
 

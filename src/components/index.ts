@@ -3,3 +3,7 @@ export { default as EmptyState } from './EmptyState';
 export { default as RecordingActions } from './RecordingActions';
 export { default as FloatingActionButton } from './FloatingActionButton';
 export { default as RecordingItem } from './RecordingItem';
+export { default as RecordingModalHeader } from './RecordingModalHeader';
+export { default as RecordingArea } from './RecordingArea';
+export { default as TranscriptionSection } from './TranscriptionSection';
+export { default as RecordingControls } from './RecordingControls';

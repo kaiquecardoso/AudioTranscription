@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
   Alert,
   Modal,
   StatusBar,
   ScrollView,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useRecording, useAudioPlayback } from '../hooks';
-import { processRecording, formatDuration, createRecordingData } from '../functions';
+import { processRecording, createRecordingData } from '../functions';
 import { recordingModalStyles } from '../styles';
 import { RecordingModalProps } from '../types';
+import RecordingModalHeader from '../components/RecordingModalHeader';
+import RecordingArea from '../components/RecordingArea';
+import TranscriptionSection from '../components/TranscriptionSection';
+import RecordingControls from '../components/RecordingControls';
 
 const RecordingModal: React.FC<RecordingModalProps> = ({
   visible,
@@ -190,200 +190,44 @@ const RecordingModal: React.FC<RecordingModalProps> = ({
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <View style={[recordingModalStyles.container, { backgroundColor: theme.background }]}>
-        <BlurView
-          intensity={80}
-          tint="dark"
-          style={[recordingModalStyles.header, {
-            borderBottomWidth: 1,
-            borderBottomColor: theme.glassBorder,
-            shadowColor: theme.glassShadow,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 8,
-          }]}
-        >
-          <TouchableOpacity onPress={handleClose} style={recordingModalStyles.closeButton}>
-            <Ionicons name="close" size={24} color={theme.onSurface} />
-          </TouchableOpacity>
-          <Text style={[recordingModalStyles.headerTitle, { color: theme.onSurface }]}>
-            Gravação de Voz
-          </Text>
-          <View style={recordingModalStyles.placeholder} />
-        </BlurView>
+        <RecordingModalHeader onClose={handleClose} />
 
         <ScrollView 
           style={recordingModalStyles.scrollView}
           contentContainerStyle={recordingModalStyles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={recordingModalStyles.recordingArea}>
-            <TouchableOpacity
-              style={[recordingModalStyles.microphoneContainer, {
-                backgroundColor: recorderState.isRecording && !state.isPaused ? theme.error : 
-                                recorderState.isRecording && state.isPaused ? theme.secondary :
-                                theme.primary,
-                shadowColor: recorderState.isRecording && !state.isPaused ? theme.error : 
-                            recorderState.isRecording && state.isPaused ? theme.secondary :
-                            theme.primary,
-              }]}
-              onPress={!recorderState.isRecording && !state.uri && !state.isPaused ? handleStartRecording : undefined}
-              disabled={recorderState.isRecording || !!state.uri}
-            >
-              <Ionicons 
-                name={recorderState.isRecording && state.isPaused ? "pause" : "mic"} 
-                size={40} 
-                color={theme.onPrimary} 
-              />
-            </TouchableOpacity>
-            
-            <Text style={[recordingModalStyles.durationText, { color: theme.onSurface }]}>
-              {formatDuration(state.duration)}
-            </Text>
-            
-            <Text style={[recordingModalStyles.statusText, { color: theme.onSurfaceVariant }]}>
-              {recorderState.isRecording && !state.isPaused ? 'Gravando...' : 
-               recorderState.isRecording && state.isPaused ? 'Gravação pausada' :
-               state.isTranscribing ? 'Processando áudio...' : 
-               state.isSaving ? 'Salvando gravação...' :
-               state.uri ? 'Gravação concluída' : 
-               'Toque no microfone para começar'}
-            </Text>
-          </View>
+          <RecordingArea
+            isRecording={recorderState.isRecording}
+            isPaused={state.isPaused}
+            duration={state.duration}
+            uri={state.uri}
+            isTranscribing={state.isTranscribing}
+            isSaving={state.isSaving}
+            onStartRecording={handleStartRecording}
+          />
 
-          {state.transcription && (
-            <View style={[recordingModalStyles.transcriptionContainer, {
-              backgroundColor: theme.surface,
-              borderColor: theme.glassBorder,
-            }]}>
-              <TouchableOpacity
-                style={recordingModalStyles.transcriptionHeader}
-                onPress={() => updateState({ isSummaryExpanded: !state.isSummaryExpanded })}
-                activeOpacity={0.7}
-              >
-                <Text style={[recordingModalStyles.transcriptionTitle, { color: theme.onSurface }]}>
-                  Transcrição
-                </Text>
-                <Ionicons 
-                  name={state.isSummaryExpanded ? "chevron-up" : "chevron-down"} 
-                  size={20} 
-                  color={theme.onSurface} 
-                />
-              </TouchableOpacity>
-              
-              <Text style={[recordingModalStyles.transcriptionText, { color: theme.onSurfaceVariant }]}>
-                {state.transcription}
-              </Text>
-              
-              {state.summary && (
-                <View style={recordingModalStyles.summarySection}>
-                  <Text style={[recordingModalStyles.summaryTitle, { color: theme.onSurface }]}>
-                    Resumo do Conteúdo
-                  </Text>
-                  
-                  {state.isSummaryExpanded && (
-                    <Text style={[recordingModalStyles.summaryText, { color: theme.onSurfaceVariant }]}>
-                      {state.summary}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </View>
-          )}
+          <TranscriptionSection
+            transcription={state.transcription}
+            summary={state.summary}
+            isSummaryExpanded={state.isSummaryExpanded}
+            onToggleSummary={() => updateState({ isSummaryExpanded: !state.isSummaryExpanded })}
+          />
 
-          <View style={recordingModalStyles.controls}>
-            {/* Durante gravação - pause e stop */}
-            {recorderState.isRecording && !state.isPaused && !state.uri && (
-              <>
-                <TouchableOpacity
-                  style={[recordingModalStyles.controlButton, {
-                    backgroundColor: theme.secondary,
-                    shadowColor: theme.secondary,
-                  }]}
-                  onPress={handlePauseRecording}
-                >
-                  <Ionicons name="pause" size={24} color={theme.onPrimary} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[recordingModalStyles.controlButton, {
-                    backgroundColor: theme.error,
-                    shadowColor: theme.error,
-                  }]}
-                  onPress={handleStopRecording}
-                >
-                  <Ionicons name="stop" size={24} color={theme.onPrimary} />
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Gravação pausada - play para continuar */}
-            {state.isPaused && (
-              <>
-                <TouchableOpacity
-                  style={[recordingModalStyles.controlButton, {
-                    backgroundColor: theme.primary,
-                    shadowColor: theme.primary,
-                  }]}
-                  onPress={handleResumeRecording}
-                >
-                  <Ionicons name="play" size={24} color={theme.onPrimary} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[recordingModalStyles.controlButton, {
-                    backgroundColor: theme.error,
-                    shadowColor: theme.error,
-                  }]}
-                  onPress={handleStopRecording}
-                >
-                  <Ionicons name="stop" size={24} color={theme.onPrimary} />
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Após gravação concluída */}
-            {state.uri && !recorderState.isRecording && (
-              <>
-                <TouchableOpacity
-                  style={[recordingModalStyles.controlButton, {
-                    backgroundColor: theme.secondary,
-                    shadowColor: theme.secondary,
-                  }]}
-                  onPress={handlePlayRecording}
-                >
-                  <Ionicons 
-                    name={isPlaying ? "pause" : "play"} 
-                    size={24} 
-                    color={theme.onPrimary} 
-                  />
-                </TouchableOpacity>
-
-                {!state.transcription && !state.isTranscribing && (
-                  <TouchableOpacity
-                    style={[recordingModalStyles.controlButton, {
-                      backgroundColor: theme.primary,
-                      shadowColor: theme.primary,
-                    }]}
-                    onPress={() => state.uri && handleTranscribeRecording(state.uri)}
-                  >
-                    <Ionicons name="analytics" size={24} color={theme.onPrimary} />
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  style={[recordingModalStyles.controlButton, {
-                    backgroundColor: state.isSaving ? theme.onSurfaceVariant : theme.tertiary,
-                    shadowColor: state.isSaving ? theme.onSurfaceVariant : theme.tertiary,
-                  }]}
-                  onPress={handleSaveRecording}
-                  disabled={state.isSaving}
-                >
-                  <Ionicons name="checkmark" size={24} color={theme.onPrimary} />
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          <RecordingControls
+            isRecording={recorderState.isRecording}
+            isPaused={state.isPaused}
+            uri={state.uri}
+            isTranscribing={state.isTranscribing}
+            isSaving={state.isSaving}
+            isPlaying={isPlaying}
+            onPauseRecording={handlePauseRecording}
+            onResumeRecording={handleResumeRecording}
+            onStopRecording={handleStopRecording}
+            onPlayRecording={handlePlayRecording}
+            onTranscribeRecording={() => state.uri && handleTranscribeRecording(state.uri)}
+            onSaveRecording={handleSaveRecording}
+          />
         </ScrollView>
       </View>
     </Modal>
