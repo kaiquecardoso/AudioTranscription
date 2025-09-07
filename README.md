@@ -320,6 +320,4 @@ Para suporte e dúvidas:
 
 ---
 
-**Desenvolvido com ❤️ usando React Native e Expo**#   A u d i o T r a n s c r i p t i o n 
- 
- 
+**Desenvolvido com ❤️ usando React Native e Expo**
