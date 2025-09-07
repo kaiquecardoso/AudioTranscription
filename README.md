@@ -2,6 +2,22 @@
 
 Um aplicativo React Native moderno para gravação de áudio com transcrição automática usando IA, interface glassmorphism e funcionalidades avançadas de gerenciamento de gravações.
 
+## 📱 Screenshots
+
+### Tela Principal de Lista de gravações
+![Tela Principal](https://fv5-6.files.fm/thumb_show.php?i=x2v5bfb22m&view&v=1&PHPSESSID=5b9453c83495df6acc9202920ab46c0a5eab7610)
+
+### Tela de gravação
+![Tela de Configurações](https://fv5-6.files.fm/thumb_show.php?i=qzfnjb5f7x&view&v=1&PHPSESSID=5b9453c83495df6acc9202920ab46c0a5eab7610)
+
+### 🎨 Interface Visual
+As imagens acima mostram a interface moderna do aplicativo com:
+- **Design glassmorphism** com efeitos de vidro e transparência
+- **Tema escuro elegante** com cores vibrantes
+- **Cards de gravações** com informações detalhadas
+- **Controles intuitivos** para reprodução e transcrição
+- **Configurações organizadas** em seções claras
+
 ## ✨ Funcionalidades Principais
 
 ### 🎤 Gravação de Áudio
@@ -15,6 +31,9 @@ Um aplicativo React Native moderno para gravação de áudio com transcrição a
 - **Transcrição automática** usando OpenAI Whisper API
 - **Resumo inteligente** do conteúdo transcrito
 - **Processamento em tempo real** após finalizar gravação
+- **Atualização automática** do item na lista após transcrição
+- **Feedback visual** durante o processamento
+- **Badges de status** mostrando estado da transcrição
 - **Configuração personalizável** para ativar/desativar transcrição automática
 
 ### 📱 Interface Moderna
@@ -38,11 +57,21 @@ Um aplicativo React Native moderno para gravação de áudio com transcrição a
 - **Gerenciamento de dados** - limpar todas as gravações
 
 ### 🗂️ Gerenciamento de Arquivos
+- **Banco de dados SQLite** para armazenamento offline
 - **Lista de gravações** com informações detalhadas
 - **Exclusão individual** com confirmação
 - **Exclusão em lote** de todas as gravações
+- **Busca e filtros** nas gravações
 - **Exportação** de gravações (funcionalidade futura)
-- **Armazenamento local** seguro
+- **Armazenamento local** seguro e confiável
+
+### 🗄️ Banco de Dados SQLite
+- **Armazenamento offline** de todas as gravações
+- **Operações CRUD** completas (Criar, Ler, Atualizar, Deletar)
+- **Busca avançada** por transcrição, resumo ou nome
+- **Estatísticas** de gravações e duração total
+- **Integridade de dados** com transações
+- **Performance otimizada** para milhares de gravações
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -69,8 +98,9 @@ Um aplicativo React Native moderno para gravação de áudio com transcrição a
 - **Fetch API** - Comunicação com APIs externas
 
 ### Armazenamento
+- **SQLite** (expo-sqlite) - Banco de dados offline para gravações
 - **AsyncStorage** 2.1.2 - Persistência de configurações
-- **FileSystem** - Armazenamento local de gravações
+- **FileSystem** - Armazenamento local de arquivos de áudio
 
 ## 📱 Estrutura do Projeto
 
@@ -137,6 +167,26 @@ yarn start
 - **iOS**: `npm run ios` ou `yarn ios`
 - **Web**: `npm run web` ou `yarn web`
 
+## 🗄️ Como Usar o Banco de Dados
+
+### Visualizar Banco de Dados
+1. **Abra o app** e navegue para a aba "Banco de Dados"
+2. **Veja informações** do banco (tamanho, total de gravações)
+3. **Execute queries SQL** personalizadas para debug
+4. **Exporte dados** para backup
+5. **Verifique integridade** do banco
+
+### Operações CRUD
+- **Criar**: Gravações são salvas automaticamente no SQLite
+- **Ler**: Lista carregada diretamente do banco
+- **Atualizar**: Transcrições e resumos atualizam o banco
+- **Deletar**: Gravações são removidas do banco e arquivo
+
+### Debug e Monitoramento
+- **Console logs** mostram operações do banco
+- **Visualizador** permite inspecionar dados
+- **Estatísticas** mostram uso e performance
+
 ## 📋 Funcionalidades Detalhadas
 
 ### Tela de Gravação (RecordingScreen)
@@ -162,6 +212,14 @@ yarn start
 - **Ações de gerenciamento** (exportar, limpar dados)
 - **Interface glassmorphism** consistente
 - **Switches personalizados** com tema
+
+### Visualizador de Banco de Dados
+- **Informações do banco** (tamanho, total de gravações)
+- **Lista detalhada** de todas as gravações
+- **Query SQL personalizada** para debug
+- **Verificação de integridade** do banco
+- **Exportação de dados** para backup
+- **Estatísticas avançadas** de uso
 
 ### Contextos e Estado
 - **ThemeContext**: Gerenciamento de cores e tema
@@ -203,16 +261,30 @@ yarn start
 - **Plugins**: expo-media-library, expo-audio
 - **Permissions**: Configuradas para Android e iOS
 
+## 🆕 Melhorias Recentes
+
+### ✅ Implementado
+- **Banco de dados SQLite** para armazenamento offline
+- **Transcrição automática** com atualização em tempo real
+- **Visualizador de banco** com ferramentas de debug
+- **Badges de status** para transcrições e resumos
+- **Feedback visual** durante processamento
+- **Operações CRUD** completas no banco
+- **Busca avançada** nas gravações
+- **Estatísticas detalhadas** do banco
+
 ## 🚧 Funcionalidades Futuras
 
 - [ ] **Exportação de gravações** para diferentes formatos
 - [ ] **Sincronização na nuvem** com backup automático
 - [ ] **Compartilhamento** de gravações e transcrições
-- [ ] **Filtros e busca** nas gravações
+- [ ] **Filtros avançados** nas gravações
 - [ ] **Temas personalizáveis** além do tema escuro
 - [ ] **Gravação em background** com notificações
 - [ ] **Integração com calendário** para agendamentos
 - [ ] **Análise de sentimento** do áudio transcrito
+- [ ] **Backup automático** do banco de dados
+- [ ] **Sincronização entre dispositivos**
 
 ## 🐛 Solução de Problemas
 
@@ -248,5 +320,6 @@ Para suporte e dúvidas:
 
 ---
 
-**Desenvolvido com ❤️ usando React Native e Expo**#   A u d i o T r a n s c r i p t i o n  
+**Desenvolvido com ❤️ usando React Native e Expo**#   A u d i o T r a n s c r i p t i o n 
+ 
  
