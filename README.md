@@ -1,4 +1,4 @@
-# 🎙️ AudioEdit - Aplicativo de Gravação e Transcrição de Voz
+# 🎙️ AudioTranscription - Aplicativo de Gravação e Transcrição de Voz
 
 Um aplicativo React Native moderno para gravação de áudio com transcrição automática usando IA, interface glassmorphism e funcionalidades avançadas de gerenciamento de gravações.
 
@@ -108,7 +108,7 @@ As imagens acima mostram a interface moderna do aplicativo com:
 ## 📱 Estrutura do Projeto
 
 ```
-AudioEdit/
+AudioTranscription/
 ├── src/
 │   ├── components/          # Componentes reutilizáveis
 │   ├── contexts/           # Contextos React (Theme, Settings)
@@ -138,8 +138,8 @@ AudioEdit/
 
 ### 1. Clone o repositório
 ```bash
-git clone https://github.com/seu-usuario/AudioEdit.git
-cd AudioEdit
+git clone https://github.com/kaiquecardoso/AudioTranscription.git
+cd AudioTranscription
 ```
 
 ### 2. Instale as dependências
